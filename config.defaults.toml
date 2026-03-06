@@ -43,9 +43,19 @@ assets_delete_batch_size = 10
 admin_assets_batch_size = 10
 
 [register]
+# Temporary mail worker host (no scheme), e.g. "api.aiuv.top".
 worker_domain = ""
+# Domain used when creating new mailboxes, e.g. "aiuv.top".
 email_domain = ""
+# Legacy: admin API password for /admin/new_address (x-admin-auth).
 admin_password = ""
+# Private-site password for cloudflare_temp_email when needAuth=true (x-custom-auth).
+# If empty, we fall back to admin_password for backward compatibility.
+site_password = ""
+# If true, create mailbox via /api/new_address (cloudflare_temp_email user API).
+# If false, use /admin/new_address (legacy admin API).
+use_api_new_address = false
+
 yescaptcha_key = ""
 solver_url = "http://127.0.0.1:5072"
 # 推荐 camoufox（对 accounts.x.ai 的 Turnstile 成功率更高）；若环境未安装会自动回退到 chromium。
