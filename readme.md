@@ -246,6 +246,88 @@ docker compose up -d
 
 > 以下示例默认使用 `localhost:8000`；若 Docker Compose 设置了 `HOST_PORT`，请替换为对应端口。
 
+### `POST /v1/admin/tokens/append`
+
+> 增强版新增接口：用于**非覆盖式**追加/更新 token，适合客户端、脚本、自动化任务增量推送 token。
+
+```bash
+curl http://localhost:8000/v1/admin/tokens/append \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <APP_KEY>" \
+  -d '{
+    "pool": "default",
+    "token": "your_token_here"
+  }'
+```
+
+<details>
+<summary>支持的请求参数</summary>
+
+<br>
+
+#### 方式 1：指定 pool 追加单个 token
+
+```json
+{
+  "pool": "default",
+  "token": "your_token_here"
+}
+```
+
+#### 方式 2：指定 pool 批量追加
+
+```json
+{
+  "pool": "default",
+  "tokens": [
+    {"token": "token_1"},
+    {"token": "token_2", "note": "from client-a", "tags": ["push"]}
+  ]
+}
+```
+
+#### 方式 3：多 pool 批量追加
+
+```json
+{
+  "default": [
+    {"token": "token_a"}
+  ],
+  "backup": [
+    {"token": "token_b", "tags": ["backup"]}
+  ]
+}
+```
+
+**返回示例**：
+
+```json
+{
+  "status": "success",
+  "message": "Token 已追加",
+  "summary": {
+    "appended": 1,
+    "updated": 0,
+    "pools": 1
+  }
+}
+```
+
+**注意事项**：
+
+- 该接口是增强版新增接口，不属于上游默认能力。
+- 该接口采用 **Bearer app_key 鉴权**，不是 query 参数 `?app_key=...`。
+- 该接口不会整体覆盖其他 pool，也不会删除现有 token。
+- 如果 token 已存在，则会在保留原有数据的基础上 merge 更新。
+- 如果你需要做整体覆盖式同步，请继续使用 `POST /v1/admin/tokens`。
+
+<br>
+
+</details>
+
+<br>
+
 ### `POST /v1/chat/completions`
 
 > 通用接口，支持对话聊天、图像生成、图像编辑、视频生成、视频超分
