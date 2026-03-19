@@ -22,6 +22,69 @@
   - `origin`：增强版仓库
   - `upstream`：原项目仓库
 
+## 与上游的主要差异
+
+当前增强版与上游相比，重点差异包括：
+
+| 项目 | 上游默认行为 | 增强版行为 |
+| :-- | :-- | :-- |
+| Token 导入/推送 | 主要依赖 `/v1/admin/tokens` 全量保存 | 新增 `/v1/admin/tokens/append` 支持增量追加 |
+| 外部客户端推 token | 需要先读全量再 merge 再覆盖保存 | 可直接使用 append API，降低误覆盖风险 |
+| 维护文档 | 以原项目说明为主 | 增加 `ENHANCEMENTS.md` 说明增强点与维护规则 |
+| 仓库定位 | 原始上游项目 | 基于上游持续维护的增强版 |
+
+如果你希望同步上游更新，同时保留增强能力，建议阅读 `ENHANCEMENTS.md` 中的维护说明。
+
+## 给客户端开发者的快速集成示例
+
+### 追加单个 token
+
+```bash
+curl -X POST 'http://HOST:PORT/v1/admin/tokens/append' \
+  -H 'Authorization: Bearer <APP_KEY>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "pool": "default",
+    "token": "your_token_here"
+  }'
+```
+
+### 批量追加 token
+
+```bash
+curl -X POST 'http://HOST:PORT/v1/admin/tokens/append' \
+  -H 'Authorization: Bearer <APP_KEY>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "pool": "default",
+    "tokens": [
+      {"token": "token_1"},
+      {"token": "token_2", "note": "from client-a", "tags": ["push"]}
+    ]
+  }'
+```
+
+### 返回示例
+
+```json
+{
+  "status": "success",
+  "message": "Token 已追加",
+  "summary": {
+    "appended": 1,
+    "updated": 0,
+    "pools": 1
+  }
+}
+```
+
+### 什么时候用哪个接口？
+
+- `POST /v1/admin/tokens`
+  - 适合：管理后台整体编辑、全量同步
+- `POST /v1/admin/tokens/append`
+  - 适合：客户端/脚本/自动化任务增量推送 token
+
 > [!NOTE]
 > 如果你是第一次接触本项目，建议优先阅读：
 > - `README.md`
