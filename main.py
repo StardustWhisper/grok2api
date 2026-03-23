@@ -68,6 +68,11 @@ async def lifespan(app: FastAPI):
     logger.info(f"Platform: {platform.system()} {platform.release()}")
     logger.info(f"Python: {sys.version.split()[0]}")
 
+    # Image backend notice (avoid silent regressions to deprecated WS imagine)
+    logger.info(
+        "Image generation backend: app-chat REST (/rest/app-chat/conversations/new)"
+    )
+
     # 4. 启动 Token 刷新调度器
     refresh_enabled = get_config("token.auto_refresh", True)
     if refresh_enabled:
