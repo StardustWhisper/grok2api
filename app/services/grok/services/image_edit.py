@@ -116,6 +116,7 @@ class ImageEditService:
                         stream=True,
                         tool_overrides=tool_overrides,
                         model_config_override=model_config_override,
+                        image_generation_count=n,
                     )
                     processor = ImageStreamProcessor(
                         model_info.model_id,
@@ -250,6 +251,7 @@ class ImageEditService:
                 stream=True,
                 tool_overrides=tool_overrides,
                 model_config_override=model_config_override,
+                image_generation_count=n,
             )
             processor = ImageCollectProcessor(
                 model_info.model_id, token, response_format=response_format

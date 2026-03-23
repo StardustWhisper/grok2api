@@ -22,9 +22,13 @@ from app.services.grok.utils.response import make_response_id, make_chat_chunk, 
 from app.services.grok.utils.stream import wrap_stream_with_usage
 from app.services.token import EffortType
 from app.services.reverse.ws_imagine import ImagineWebSocketReverse
+from app.services.grok.services.image_rest import ImageGenerationRestService
 
 
+# Legacy WebSocket-based imagine (deprecated upstream).
 image_service = ImagineWebSocketReverse()
+# New REST (app-chat) based image generation.
+image_rest_service = ImageGenerationRestService()
 
 
 @dataclass
@@ -61,122 +65,35 @@ class ImageGenerationService:
             enable_nsfw = bool(get_config("image.nsfw"))
         prefer_tags = {"nsfw"} if enable_nsfw else None
 
+        # Prefer REST (app-chat) based image generation.
         if stream:
-
-            async def _stream_retry() -> AsyncGenerator[str, None]:
-                nonlocal last_error
-                for attempt in range(max_token_retries):
-                    preferred = token if (attempt == 0 and not prefer_tags) else None
-                    current_token = await pick_token(
-                        token_mgr,
-                        model_info.model_id,
-                        tried_tokens,
-                        preferred=preferred,
-                        prefer_tags=prefer_tags,
-                    )
-                    if not current_token:
-                        if last_error:
-                            raise last_error
-                        raise AppException(
-                            message="No available tokens. Please try again later.",
-                            error_type=ErrorType.RATE_LIMIT.value,
-                            code="rate_limit_exceeded",
-                            status_code=429,
-                        )
-
-                    tried_tokens.add(current_token)
-                    yielded = False
-                    try:
-                        result = await self._stream_ws(
-                            token_mgr=token_mgr,
-                            token=current_token,
-                            model_info=model_info,
-                            prompt=prompt,
-                            n=n,
-                            response_format=response_format,
-                            size=size,
-                            aspect_ratio=aspect_ratio,
-                            enable_nsfw=enable_nsfw,
-                            chat_format=chat_format,
-                        )
-                        async for chunk in result.data:
-                            yielded = True
-                            yield chunk
-                        return
-                    except UpstreamException as e:
-                        last_error = e
-                        if rate_limited(e):
-                            if yielded:
-                                raise
-                            await token_mgr.mark_rate_limited(current_token)
-                            logger.warning(
-                                f"Token {current_token[:10]}... rate limited (429), "
-                                f"trying next token (attempt {attempt + 1}/{max_token_retries})"
-                            )
-                            continue
-                        raise
-
-                if last_error:
-                    raise last_error
-                raise AppException(
-                    message="No available tokens. Please try again later.",
-                    error_type=ErrorType.RATE_LIMIT.value,
-                    code="rate_limit_exceeded",
-                    status_code=429,
-                )
-
-            return ImageGenerationResult(stream=True, data=_stream_retry())
-
-        for attempt in range(max_token_retries):
-            preferred = token if (attempt == 0 and not prefer_tags) else None
-            current_token = await pick_token(
-                token_mgr,
-                model_info.model_id,
-                tried_tokens,
-                preferred=preferred,
-                prefer_tags=prefer_tags,
+            return await image_rest_service.generate(
+                token_mgr=token_mgr,
+                token=token,
+                model_info=model_info,
+                prompt=prompt,
+                n=n,
+                response_format=response_format,
+                size=size,
+                aspect_ratio=aspect_ratio,
+                stream=True,
+                enable_nsfw=enable_nsfw,
+                chat_format=chat_format,
             )
-            if not current_token:
-                if last_error:
-                    raise last_error
-                raise AppException(
-                    message="No available tokens. Please try again later.",
-                    error_type=ErrorType.RATE_LIMIT.value,
-                    code="rate_limit_exceeded",
-                    status_code=429,
-                )
 
-            tried_tokens.add(current_token)
-            try:
-                return await self._collect_ws(
-                    token_mgr=token_mgr,
-                    token=current_token,
-                    model_info=model_info,
-                    tried_tokens=tried_tokens,
-                    prompt=prompt,
-                    n=n,
-                    response_format=response_format,
-                    aspect_ratio=aspect_ratio,
-                    enable_nsfw=enable_nsfw,
-                )
-            except UpstreamException as e:
-                last_error = e
-                if rate_limited(e):
-                    await token_mgr.mark_rate_limited(current_token)
-                    logger.warning(
-                        f"Token {current_token[:10]}... rate limited (429), "
-                        f"trying next token (attempt {attempt + 1}/{max_token_retries})"
-                    )
-                    continue
-                raise
-
-        if last_error:
-            raise last_error
-        raise AppException(
-            message="No available tokens. Please try again later.",
-            error_type=ErrorType.RATE_LIMIT.value,
-            code="rate_limit_exceeded",
-            status_code=429,
+        # Prefer REST (app-chat) based image generation.
+        return await image_rest_service.generate(
+            token_mgr=token_mgr,
+            token=token,
+            model_info=model_info,
+            prompt=prompt,
+            n=n,
+            response_format=response_format,
+            size=size,
+            aspect_ratio=aspect_ratio,
+            stream=False,
+            enable_nsfw=enable_nsfw,
+            chat_format=chat_format,
         )
 
     async def _stream_ws(

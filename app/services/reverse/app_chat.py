@@ -54,10 +54,14 @@ class AppChatReverse:
         file_attachments: List[str] = None,
         tool_overrides: Dict[str, Any] = None,
         model_config_override: Dict[str, Any] = None,
+        image_generation_count: int | None = None,
     ) -> Dict[str, Any]:
         """Build chat payload for Grok app-chat API."""
 
         attachments = file_attachments or []
+
+        if image_generation_count is None:
+            image_generation_count = 2
 
         payload = {
             "deviceEnvInfo": {
@@ -79,7 +83,7 @@ class AppChatReverse:
             "forceConcise": False,
             "forceSideBySide": False,
             "imageAttachments": [],
-            "imageGenerationCount": 2,
+            "imageGenerationCount": int(image_generation_count),
             "isAsyncChat": False,
             "isReasoning": False,
             "message": message,
@@ -120,6 +124,7 @@ class AppChatReverse:
         file_attachments: List[str] = None,
         tool_overrides: Dict[str, Any] = None,
         model_config_override: Dict[str, Any] = None,
+        image_generation_count: int | None = None,
     ) -> Any:
         """Send app chat request to Grok.
         
@@ -153,6 +158,7 @@ class AppChatReverse:
                 file_attachments=file_attachments,
                 tool_overrides=tool_overrides,
                 model_config_override=model_config_override,
+                image_generation_count=image_generation_count,
             )
             payload_summary = {
                 "model": payload.get("modelName"),
