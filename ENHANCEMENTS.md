@@ -63,6 +63,35 @@ curl -X POST 'http://HOST:PORT/v1/admin/tokens/append' \
   -d '{"pool":"default","token":"your_token_here"}'
 ```
 
+### 2. 图片生成：从旧 WebSocket imagine 迁移到 app-chat REST
+
+背景：
+- Grok 已废弃旧 WebSocket 生图端点（wss://grok.com/ws/imagine/listen），继续使用会稳定失败（常见为 rate_limit_exceeded/blocked/无最终图）。
+- 现已切换为网页端同款的 app-chat REST 流程。
+
+改动：
+- /v1/images/generations：从 ws_imagine 改为 app-chat REST（/rest/app-chat/conversations/new）
+- 支持将 OpenAI 的 n 映射为 imageGenerationCount=n
+- response_format=b64_json：自动下载图片并转 base64 返回（兼容 DALI 默认行为）
+
+关键文件：
+- app/services/grok/services/image_rest.py（REST 生图实现）
+- app/services/grok/services/image.py（入口改为优先 REST）
+- app/services/reverse/app_chat.py（新增 image_generation_count 参数，写入 imageGenerationCount）
+- main.py：启动日志明确打印 Image generation backend=app-chat REST（防回退）
+- scripts/selftest_images.sh：最小自测脚本（验收 data[0].b64_json 非空）
+
+验收：
+```bash
+cd /home/ubuntu/.openclaw/workspace/services/Grok2API-enhanced
+API_KEY=xxxx BASE_URL=https://xai.lambda.xin ./scripts/selftest_images.sh
+```
+
+部署注意：
+- docker-compose.yml 必须使用本地 build（build: .），否则容器仍跑远程镜像看不到本地改动。
+- 由于 proxy.base_proxy_url="socks5://warp:1080"，需保留 warp 服务；移除 warp 前必须先改配置再回归测试。
+
+
 ## 关键认知
 
 ### 管理界面的“导入”不是后端原生 append
