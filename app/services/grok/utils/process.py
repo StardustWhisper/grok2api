@@ -61,10 +61,22 @@ def _collect_images(obj: Any) -> List[str]:
                     elif isinstance(item, str):
                         add(item)
                     continue
+                if key == "imageUrl" and isinstance(item, str) and item:
+                    add(item)
+                    continue
                 walk(item)
         elif isinstance(value, list):
             for item in value:
-                walk(item)
+                if isinstance(item, str):
+                    # Parse JSON strings (cardAttachmentsJson entries)
+                    try:
+                        import orjson
+                        parsed = orjson.loads(item)
+                        walk(parsed)
+                    except Exception:
+                        pass
+                else:
+                    walk(item)
 
     walk(obj)
     return urls
