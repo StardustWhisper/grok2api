@@ -79,6 +79,8 @@ def _collect_images(obj: Any) -> List[str]:
                     walk(item)
 
     walk(obj)
+    # Filter out partial/progress images (contain -part- suffix)
+    urls = [u for u in urls if '-part-' not in u]
     return urls
 
 
